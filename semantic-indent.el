@@ -91,7 +91,7 @@ Leave point at the end of indentation."
 (define-minor-mode semantic-indent-mode
   "A minor-mode for semantically-significant indentation."
   nil  ; init-value
-  "semantic-indent"  ; lighter
+  nil  ; lighter
   (list  ; keymap
    (cons (kbd "<return>")  #'semantic-indent/newline-and-indent)
    (cons (kbd "<tab>")     #'semantic-indent/shift-right-line)
