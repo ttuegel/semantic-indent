@@ -46,14 +46,29 @@ Leave point at the end of indentation."
 
 (defun semantic-indent/shift-left-line (&optional half-width)
   (interactive "P")
-  (semantic-indent/shift-line
-   (/ (- semantic-indent-shift-width) (if half-width 2 1))))
+  (let* ((width (/ (- semantic-indent-shift-width) (if half-width 2 1)))
+         (cur-indent (current-indentation))
+         (min-indent (- cur-indent width)))
+    (semantic-indent/indent-line-to
+     (semantic-indent/prev-line-indent cur-indent min-indent))))
 
-(defun semantic-indent/default-indent ()
+(defun semantic-indent/backward-line-for-indent ()
+  (let (done)
+    (setq done (= 0 (forward-line -1)))
+    (when (semantic-indent/is-empty-line) (setq done (= 0 (forward-line -1))))
+    done))
+
+(defun semantic-indent/prev-indent (max-indent &optional min-indent)
+  "Search backward for an indent point between MIN-INDENT and MAX-INDENT.
+
+MIN-INDENT defaults to 0 if not set."
+  (when (not min-indent) (setq min-indent 0))
   (save-excursion
-    (forward-line -1)
-    (when (semantic-indent/is-blank-line) (forward-line -1))
-    (current-indentation)))
+    (let* ((ind (current-indentation)))
+      (while (and (>= ind max-indent) (>= ind min-indent))
+        (semantic-indent/backward-line-for-indent)
+        (setq ind (current-indentation)))
+      (max ind min-indent))))
 
 (defun semantic-indent/is-blank-line ()
   (save-excursion
@@ -76,15 +91,15 @@ Leave point at the end of indentation."
         (q (/ ind semantic-indent-shift-width)))
     (* (if (= 0 r) q (1+ q)) semantic-indent-shift-width)))
 
-(defun semantic-indent/next-indentation ()
-  (let* ((off (if (semantic-indent/is-empty-line) -1 0)))
-    (semantic-indent/round-indent-up
-     (semantic-indent/current-indentation off))))
+(defun semantic-indent/default-indent ()
+  (save-excursion
+    (semantic-indent/backward-line-for-indent)
+    (semantic-indent/round-indent-up (current-indentation))))
 
 (defun semantic-indent/newline-and-indent ()
   (interactive)
   (when (semantic-indent/is-blank-line) (semantic-indent/delete-line))
-  (let ((actual-indentation (semantic-indent/next-indentation)))
+  (let ((actual-indentation (semantic-indent/default-indent)))
     (newline)
     (semantic-indent/indent-line-to actual-indentation)))
 
