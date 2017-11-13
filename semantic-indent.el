@@ -30,6 +30,23 @@
 (defvar semantic-indent-shift-width 4
   "The default unit of indentation.")
 
+(defun semantic-indent/is-blank-line ()
+  (save-excursion
+    (beginning-of-line)
+    (looking-at-p "^[[:space:]]*$")))
+
+(defun semantic-indent/is-empty-line ()
+  (= (line-beginning-position) (line-end-position)))
+
+(defun semantic-indent/delete-line ()
+  (delete-region (line-beginning-position) (line-end-position)))
+
+(defun semantic-indent/backward-line-for-indent ()
+  (let (done)
+    (setq done (= 0 (forward-line -1)))
+    (when (semantic-indent/is-empty-line) (setq done (= 0 (forward-line -1))))
+    done))
+
 (defun semantic-indent/indent-line-to (column)
   (let ((indent-tabs-mode nil)) (indent-line-to column)))
 
@@ -44,62 +61,28 @@ Leave point at the end of indentation."
   (semantic-indent/shift-line
    (/ semantic-indent-shift-width (if half-width 2 1))))
 
-(defun semantic-indent/shift-left-line (&optional half-width)
-  (interactive "P")
-  (let* ((width (/ (- semantic-indent-shift-width) (if half-width 2 1)))
-         (cur-indent (current-indentation))
-         (min-indent (- cur-indent width)))
-    (semantic-indent/indent-line-to
-     (semantic-indent/prev-line-indent cur-indent min-indent))))
+(defun semantic-indent/shift-left-line ()
+  (semantic-indent/indent-line-to
+   (semantic-indent/previous-indentation (current-indentation))))
 
-(defun semantic-indent/backward-line-for-indent ()
-  (let (done)
-    (setq done (= 0 (forward-line -1)))
-    (when (semantic-indent/is-empty-line) (setq done (= 0 (forward-line -1))))
-    done))
-
-(defun semantic-indent/prev-indent (max-indent &optional min-indent)
-  "Search backward for an indent point between MIN-INDENT and MAX-INDENT.
-
-MIN-INDENT defaults to 0 if not set."
-  (when (not min-indent) (setq min-indent 0))
+(defun semantic-indent/previous-indentation (start)
+  "Search backward for an indentation point left of START."
   (save-excursion
-    (let* ((ind (current-indentation)))
-      (while (and (>= ind max-indent) (>= ind min-indent))
+    (let* ((current (current-indentation)))
+      (while (>= current start)
         (semantic-indent/backward-line-for-indent)
-        (setq ind (current-indentation)))
-      (max ind min-indent))))
+        (setq current (current-indentation)))
+      current)))
 
-(defun semantic-indent/is-blank-line ()
-  (save-excursion
-    (beginning-of-line)
-    (looking-at-p "^[[:space:]]*$")))
-
-(defun semantic-indent/delete-line ()
-  (delete-region (line-beginning-position) (line-end-position)))
-
-(defun semantic-indent/current-indentation (&optional n)
-  (save-excursion
-    (forward-line (or n 0))
-    (current-indentation)))
-
-(defun semantic-indent/is-empty-line ()
-  (= (line-beginning-position) (line-end-position)))
-
-(defun semantic-indent/round-indent-up (ind)
-  (let ((r (% ind semantic-indent-shift-width))
-        (q (/ ind semantic-indent-shift-width)))
-    (* (if (= 0 r) q (1+ q)) semantic-indent-shift-width)))
-
-(defun semantic-indent/default-indent ()
+(defun semantic-indent/default-indentation ()
   (save-excursion
     (semantic-indent/backward-line-for-indent)
-    (semantic-indent/round-indent-up (current-indentation))))
+    (current-indentation)))
 
 (defun semantic-indent/newline-and-indent ()
   (interactive)
   (when (semantic-indent/is-blank-line) (semantic-indent/delete-line))
-  (let ((actual-indentation (semantic-indent/default-indent)))
+  (let ((actual-indentation (semantic-indent/default-indentation)))
     (newline)
     (semantic-indent/indent-line-to actual-indentation)))
 
