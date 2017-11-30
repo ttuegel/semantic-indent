@@ -82,9 +82,9 @@ Leave point at the end of indentation."
 (defun semantic-indent/newline-and-indent ()
   (interactive)
   (when (semantic-indent/is-blank-line) (semantic-indent/delete-line))
-  (let ((actual-indentation (semantic-indent/default-indentation)))
-    (newline)
-    (semantic-indent/indent-line-to actual-indentation)))
+  (newline)
+  (semantic-indent/indent-line-to
+   (semantic-indent/default-indentation)))
 
 (define-minor-mode semantic-indent-mode
   "A minor-mode for semantically-significant indentation."
